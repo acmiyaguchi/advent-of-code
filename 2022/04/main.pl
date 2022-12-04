@@ -39,16 +39,10 @@ part2(In, Out):-
     include(any_overlap, Parsed, Valid),
     length(Valid, Out).
 
+read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
 :-
     UseInput = true,
-    (UseInput ->
-        open("2022/04/input.txt", read, Str),
-        read_string(Str, _, In),
-        close(Str)
-    ;
-        sample(In)
-    ),
-    part1(In, Out1),
-    print(Out1), nl,
-    part2(In, Out2),
-    print(Out2).
+    Path = "2022/04/input.txt",
+    (UseInput -> read_file(Path, In); sample(In)),
+    part1(In, Out1), print(Out1), nl,
+    part2(In, Out2), print(Out2), nl.

@@ -4,6 +4,20 @@
 % function.
 % https://swish.swi-prolog.org/p/aoc-2022-01.pl
 
+sample("1000
+2000
+3000
+
+4000
+
+5000
+6000
+
+7000
+8000
+9000
+
+10000").
 
 gather_inputs([], [], Out, Out).
 gather_inputs([], Cur, Acc, Out):-
@@ -39,31 +53,10 @@ part2(In, Out):-
     length(Top3, 3),
     sumlist(Top3, Out).
 
+read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
 :-
     UseInput = true,
-    (UseInput ->
-        open("2022/01/input.txt", read, Str),
-        read_string(Str, _, In),
-        close(Str)
-    ;
-        sample(In)
-    ),
-    part1(In, Out1),
-    print(Out1), nl,
-    part2(In, Out2),
-    print(Out2).
-
-sample("1000
-2000
-3000
-
-4000
-
-5000
-6000
-
-7000
-8000
-9000
-
-10000").
+    Path = "2022/01/input.txt",
+    (UseInput -> read_file(Path, In); sample(In)),
+    part1(In, Out1), print(Out1), nl,
+    part2(In, Out2), print(Out2), nl.

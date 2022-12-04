@@ -43,7 +43,7 @@ play(A-B, Res):-
     Res is Value + 3.
 
 % fall through when losing
-play(A-B, Res):- score(B, Res).
+play(_-B, Res):- score(B, Res).
 
 % part 2: B is the outcome we need
 play2(A-"X", Res):-
@@ -74,16 +74,10 @@ part2(In, Out):-
     % print(Scores), nl,
     sum_list(Scores, Out).
 
+read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
 :-
     UseInput = true,
-    (UseInput ->
-        open("2022/02/input.txt", read, Str),
-        read_string(Str, _, In),
-        close(Str)
-    ;
-        sample(In)
-    ),
-    part1(In, Out1),
-    print(Out1), nl,
-    part2(In, Out2),
-    print(Out2).
+    Path = "2022/02/input.txt",
+    (UseInput -> read_file(Path, In); sample(In)),
+    part1(In, Out1), print(Out1), nl,
+    part2(In, Out2), print(Out2), nl.
