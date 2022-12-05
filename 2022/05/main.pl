@@ -1,3 +1,9 @@
+% smh, spent 2-3 hours with a bug that derived from the parser. When transposing
+% the list of lists, I used the number of lines and not the number of columns.
+% This lead to prolog trying to find a bunch of wrong solutions. Placing a cut
+% after parsing input is probably a good idea. I should have known better. Also,
+% I'd like to come back to this later and solve this using a DCG.
+
 sample("    [D]
 [N] [C]
 [Z] [M] [P]
@@ -91,18 +97,9 @@ parse_input(In, Stacks-Moves):-
 
 move_blocks([], State, State).
 move_blocks([[Q,From,To]|Moves], State, Out):-
-    % length(Moves, Depth),
-    % format("Depth: ~w~n", [Depth]),
-    % format("move ~w from ~w to ~w~n", [Q, From, To]),
-
     get_assoc(From, State, FromStack),
     get_assoc(To, State, ToStack),
 
-    % print stacks
-    % format("From: ~w~n", [FromStack]),
-    % format("To: ~w~n", [ToStack]),
-
-    % move Q blocks from From to To
     length(Top, Q),
     append(NewFromStack, Top, FromStack),
     reverse(Top, TopRev),
@@ -110,29 +107,35 @@ move_blocks([[Q,From,To]|Moves], State, Out):-
 
     put_assoc(From, State, NewFromStack, State1),
     put_assoc(To, State1, NewToStack, State2),
-
     move_blocks(Moves, State2, Out).
 
-part1(In, Out):-
+solve(In, Func, Out):-
     parse_input(In, Stacks-Moves),
-    !,
-    print(Stacks),nl,
-    % Out = Stacks-Moves.
-    move_blocks(Moves, Stacks, Result),
-    % get the top of the stack
+    call(Func, Moves, Stacks, Result),
     assoc_to_values(Result, ResultValues),
     include([Elem]>>(length(Elem, N), N > 0), ResultValues, Valid),
     maplist([Stack, Top]>>last(Stack, Top), Valid, Tops),
     string_chars(Out, Tops).
 
-part2(In, Out):-
-    part1(In, Out).
+part1(In, Out):- solve(In, move_blocks, Out).
+
+move_blocks2([], State, State).
+move_blocks2([[Q,From,To]|Moves], State, Out):-
+    get_assoc(From, State, FromStack),
+    get_assoc(To, State, ToStack),
+    length(Top, Q),
+    append(NewFromStack, Top, FromStack),
+    append(ToStack, Top, NewToStack),
+    put_assoc(From, State, NewFromStack, State1),
+    put_assoc(To, State1, NewToStack, State2),
+    move_blocks2(Moves, State2, Out).
+
+part2(In, Out):- solve(In, move_blocks2, Out).
 
 read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
 :-
     UseInput = true,
     Path = "2022/05/input.txt",
     (UseInput -> read_file(Path, In); sample(In)),
-    % trace(move_blocks, +fail),
-    part1(In, Out1), print(Out1), nl.
-    % part2(In, Out2), print(Out2), nl.
+    part1(In, Out1), print(Out1), nl,
+    part2(In, Out2), print(Out2), nl.
