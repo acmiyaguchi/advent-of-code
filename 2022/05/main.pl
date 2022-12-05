@@ -38,6 +38,10 @@ build_stack(Lists, Index, Out):-
     include(key_in_row(Index), Lists, Valid),
     maplist(value_from_row(Index), Valid, Out).
 
+zip([], [], []).
+zip([H1|T1], [H2|T2], [H1-H2|T3]):-
+    zip(T1, T2, T3).
+
 parse_stacks(Lines, Out):-
     % add a space to the end of each bracket line
     maplist([Line, Normed]>>string_concat(Line, " ", Normed), Lines, Normed),
@@ -49,11 +53,16 @@ parse_stacks(Lines, Out):-
     ),
     maplist([Line, Crates]>>get_block_position(Line, 1, [], Crates), BracketLinesSplit, Crates),
     reverse(Crates, CratesReversed),
-    length(Crates, N),
+    % get the size of the largest list
+    maplist(length, Crates, Lengths),
+    max_list(Lengths, N),
     % create a list of numbers between 1 and N
     findall(X, between(1, N, X), Indexes),
     sort(Indexes, SortedIndexes),
-    maplist(build_stack(CratesReversed), SortedIndexes, Out).
+    maplist(build_stack(CratesReversed), SortedIndexes, Stacks),
+    zip(SortedIndexes, Stacks, Pairs),
+    list_to_assoc(Pairs, Out).
+
 
 parse_move(Lines, Out):-
     maplist([Line, [Q,From,To]]>>(
@@ -79,44 +88,42 @@ parse_input(In, Stacks-Moves):-
     parse_stacks(BracketLines, Stacks),
     parse_move(MoveLines, Moves).
 
+
 move_blocks([], State, State).
 move_blocks([[Q,From,To]|Moves], State, Out):-
-    nth1(From, State, FromStack),
-    nth1(To, State, ToStack),
+    % length(Moves, Depth),
+    % format("Depth: ~w~n", [Depth]),
+    % format("move ~w from ~w to ~w~n", [Q, From, To]),
+
+    get_assoc(From, State, FromStack),
+    get_assoc(To, State, ToStack),
+
+    % print stacks
+    % format("From: ~w~n", [FromStack]),
+    % format("To: ~w~n", [ToStack]),
 
     % move Q blocks from From to To
-    append(NewFromStack, TopFromStack, FromStack),
-    length(TopFromStack, Q),
-    reverse(TopFromStack, TopFromStackReversed),
-    append(ToStack, TopFromStackReversed, NewToStack),
-    !,
+    length(Top, Q),
+    append(NewFromStack, Top, FromStack),
+    reverse(Top, TopRev),
+    append(ToStack, TopRev, NewToStack),
 
-    % now create a new state from the old state by replacing these two elements
-    length(NewState, N),
-    length(State, N),
-    nth1(From, NewState, NewFromStack),
-    nth1(To, NewState, NewToStack),
-    % also copy over the state from Stacks
-    findall(X, between(1, N, X), Indexes),
-    subtract(Indexes, [From, To], OtherIndexes),
-    sort(OtherIndexes, SortedIndexes),
-    !,
+    put_assoc(From, State, NewFromStack, State1),
+    put_assoc(To, State1, NewToStack, State2),
 
-    maplist({State, NewState}/[I]>>(
-        nth1(I, State, Entry),
-        nth1(I, NewState, Entry)
-    ), SortedIndexes),
-    !,
-    move_blocks(Moves, NewState, Out).
+    move_blocks(Moves, State2, Out).
 
 part1(In, Out):-
     parse_input(In, Stacks-Moves),
-    move_blocks(Moves, Stacks, Out).
+    !,
+    print(Stacks),nl,
+    % Out = Stacks-Moves.
+    move_blocks(Moves, Stacks, Result),
     % get the top of the stack
-    % maplist(reverse, State, Reversed),
-    % include([Elem]>>(length(Elem, N), N > 0), Reversed, Stacks),
-    % maplist([Stack, Top]>>nth1(1, Stack, Top), Stacks, Tops),
-    % string_chars(Out, Tops).
+    assoc_to_values(Result, ResultValues),
+    include([Elem]>>(length(Elem, N), N > 0), ResultValues, Valid),
+    maplist([Stack, Top]>>last(Stack, Top), Valid, Tops),
+    string_chars(Out, Tops).
 
 part2(In, Out):-
     part1(In, Out).
@@ -126,5 +133,6 @@ read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
     UseInput = true,
     Path = "2022/05/input.txt",
     (UseInput -> read_file(Path, In); sample(In)),
+    % trace(move_blocks, +fail),
     part1(In, Out1), print(Out1), nl.
     % part2(In, Out2), print(Out2), nl.
