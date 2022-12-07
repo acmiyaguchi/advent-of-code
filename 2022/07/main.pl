@@ -1,3 +1,9 @@
+% 3 hours and 5 minutes (~15 minutes for part 2). This was a doozy to parse, but
+% it was even more difficult to figure out how to sum up the sizes of the
+% directories. I ended up being able to take advantage of the fact that I can
+% sort individual directories by depth, and then sum up using the nodes using
+% their immediate children. Not super intuitive, but it works. the second part
+% was relatively easy, but the small piece of algebra tripped me up.
 sample("$ cd /
 $ ls
 dir a
@@ -22,24 +28,6 @@ $ ls
 5626152 d.ext
 7214296 k").
 
-sample("$ cd /
-$ ls
-1 zzz
-$ cd a
-$ ls
-1 zzz
-$ cd b
-$ ls
-1 zzz
-$ cd ..
-$ cd c
-$ ls
-1 zzz
-$ cd ..
-$ cd d
-$ ls
-1 zzz
-").
 
 parse_input(In, Out):-
     split_string(In, "\n", "", Lines),
@@ -95,20 +83,20 @@ sum_sub_paths(Assoc, [H|T], AccAssoc, Out):-
     get_assoc(H, Assoc, Value),
     Sum is AccSum + Value,
 
-    print("path: "), print(H), nl,
-    print("keys: "),print(Keys), nl,
-    print("subpaths: "),print(SubPaths), nl,
-    print(Sum), nl,
+    % print("path: "), print(H), nl,
+    % print("keys: "),print(Keys), nl,
+    % print("subpaths: "),print(SubPaths), nl,
+    % print(Sum), nl,
 
     put_assoc(H, AccAssoc, Sum, NewAccAssoc),
     sum_sub_paths(Assoc, T, NewAccAssoc, Out).
 sum_sub_paths(_, [], Assoc, Assoc).
 
-part1(In, Out):-
+solver_for_paths(In, SummedAssoc):-
     parse_input(In, Parsed),
     empty_assoc(Empty),
     walk_input(Parsed, [], Empty, Assoc),
-    print(Assoc), nl,
+    % print(Assoc), nl,
     assoc_to_keys(Assoc, Keys),
     maplist([Key, N-Key]>>(
         string_concat("/", Rel, Key),
@@ -117,19 +105,25 @@ part1(In, Out):-
     ), Keys, Pairs),
     keysort(Pairs, KeyPairsSorted),
     maplist([_-Key, Key]>>true, KeyPairsSorted, KeysSorted),
-    print(KeysSorted), nl,
-    sum_sub_paths(Assoc, KeysSorted, Empty, SummedAssoc),
+    % print(KeysSorted), nl,
+    sum_sub_paths(Assoc, KeysSorted, Empty, SummedAssoc).
 
-    % print(SummedAssoc), nl,
-    % get_assoc("/", SummedAssoc, TestVal),
-    % print(TestVal), nl,
-
-    assoc_to_values(SummedAssoc, Values),
+part1(In, Out):-
+    solver_for_paths(In, Assoc),
+    assoc_to_values(Assoc, Values),
     include([X]>>(X =< 100_000), Values, AtMost),
     sum_list(AtMost, Out).
 
 part2(In, Out):-
-    part1(In, Out).
+    solver_for_paths(In, Assoc),
+    Available = 70_000_000,
+    AtLeastSpace = 30_000_000,
+    get_assoc("/", Assoc, RootSize),
+    NeedSpace is AtLeastSpace - (Available - RootSize),
+    assoc_to_values(Assoc, Sizes),
+    include({NeedSpace}/[Size]>>(Size >= NeedSpace), Sizes, Valid),
+    sort(Valid, Sorted),
+    nth0(0, Sorted, Out).
 
 read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
 :-
@@ -137,10 +131,12 @@ read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
     read_file(Path, In),
     findall(X, sample(X), Samples),
 
-    print("solutions for part 1 samples"), nl,
-    maplist([X]>>(part1(X, Sol), print("========="), nl, print(Sol), nl), Samples),
-    part1(In, Out1), print(Out1), nl.
+    print("part 1 samples"), nl,
+    maplist([X]>>(part1(X, Sol), print(Sol), nl), Samples),
+    print("part 1 input"), nl,
+    part1(In, Out1), print(Out1), nl,
 
-    % maplist([X, Sol]>>part2(X, Sol), Samples, Sol2), nl,
-    % print("solutions for part 2 samples"), nl, print(Sol2), nl,
-    % part2(In, Out2), print(Out2), nl.
+    print("part 2 samples"), nl,
+    maplist([X]>>(part2(X, Sol), print(Sol), nl), Samples),
+    print("part 2 input"), nl,
+    part2(In, Out2), print(Out2), nl.
