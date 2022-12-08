@@ -1,6 +1,6 @@
 # 2022
 
-Prolog once again!
+Prolog (and some Python) once again!
 
 ## quickstart
 
