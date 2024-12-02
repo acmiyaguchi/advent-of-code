@@ -13,84 +13,43 @@ parse_input(In, Out):-
     split_string(In, "\n", "", Split),
     maplist(parse_line, Split, Out).
 
-% base
-monotonically_increasing_safely(_,_,[_]).
-% safe
-monotonically_increasing_safely(ToleratedErrors, P, [A,B|T]):-
-    A < B,
-    abs(A-B) =< 3,
-    abs(A-B) >= 1,
-    append(P, [A], PPrime),
-    monotonically_increasing_safely(ToleratedErrors, PPrime, [B|T]).
-% tolerate an error by dropping the current element
-monotonically_increasing_safely(ToleratedErrors, P, [A,_|T]):-
-    ToleratedErrorsPrime is ToleratedErrors - 1,
-    ToleratedErrorsPrime >= 0,
-    % new list with current element dropped
-    append(P, [A|T], Dropped),
-    (
-        monotonically_increasing_safely(ToleratedErrorsPrime, [], Dropped);
-        monotonically_decreasing_safely(ToleratedErrorsPrime, [], Dropped)
-    ).
-monotonically_increasing_safely(ToleratedErrors, P, [_,A|T]):-
-    ToleratedErrorsPrime is ToleratedErrors - 1,
-    ToleratedErrorsPrime >= 0,
-    % new list with current element dropped
-    append(P, [A|T], Dropped),
-    (
-        monotonically_increasing_safely(ToleratedErrorsPrime, [], Dropped);
-        monotonically_decreasing_safely(ToleratedErrorsPrime, [], Dropped)
-    ).
-monotonically_increasing_safely(Tol, L):-
-    monotonically_increasing_safely(Tol, [], L).
+gt(A,B):- A > B.
+lt(A,B):- A < B.
 
-monotonically_decreasing_safely(_,_,[_]).
-monotonically_decreasing_safely(ToleratedErrors, P, [A,B|T]):-
-    A > B,
+% base
+safe(_,_,_,[_]).
+% safe
+safe(Op, Tol, P, [A,B|T]):-
+    apply(Op, [A, B]),
     abs(A-B) =< 3,
     abs(A-B) >= 1,
     append(P, [A], PPrime),
-    monotonically_decreasing_safely(ToleratedErrors, PPrime, [B|T]).
-monotonically_decreasing_safely(ToleratedErrors, P, [A,_|T]):-
-    ToleratedErrorsPrime is ToleratedErrors - 1,
-    ToleratedErrorsPrime >= 0,
-    % new list with current element dropped
-    append(P, [A|T], Dropped),
+    safe(Op, Tol, PPrime, [B|T]).
+% tolerate an error by dropping the current element
+safe(_, Tol, P, [A,B|T]):-
+    TolP is Tol - 1,
+    TolP >= 0,
+    append(P, [A|T], DropA),
+    append(P, [B|T], DropB),
     (
-        monotonically_increasing_safely(ToleratedErrorsPrime, [], Dropped);
-        monotonically_decreasing_safely(ToleratedErrorsPrime, [], Dropped)
+        safe(gt, TolP, [], DropA);
+        safe(lt, TolP, [], DropA);
+        safe(gt, TolP, [], DropB);
+        safe(lt, TolP, [], DropB)
     ).
-monotonically_decreasing_safely(ToleratedErrors, P, [_,A|T]):-
-    ToleratedErrorsPrime is ToleratedErrors - 1,
-    ToleratedErrorsPrime >= 0,
-    % new list with current element dropped
-    append(P, [A|T], Dropped),
-    (
-        monotonically_increasing_safely(ToleratedErrorsPrime, [], Dropped);
-        monotonically_decreasing_safely(ToleratedErrorsPrime, [], Dropped)
-    ).
-monotonically_decreasing_safely(Tol, L):-
-    monotonically_decreasing_safely(Tol, [], L).
+safe(Pred, Tol, L):-
+    safe(Pred, Tol, [], L).
+safe(Pred, L):-
+    safe(Pred, 0, L).
 
 part1(In, Out):-
     parse_input(In, Levels),
-    include([L]>>(
-        (
-            monotonically_increasing_safely(0, L);
-            monotonically_decreasing_safely(0, L)
-        )
-    ), Levels, Valid),
+    include([L]>>(safe(lt, L); safe(gt, L)), Levels, Valid),
     length(Valid, Out).
 
 part2(In, Out):-
     parse_input(In, Levels),
-    include([L]>>(
-        (
-            monotonically_increasing_safely(1, L);
-            monotonically_decreasing_safely(1, L)
-        )
-    ), Levels, Valid),
-    % print(Valid), nl,
+    include([L]>>(safe(lt, 1, L); safe(gt, 1, L)), Levels, Valid),
     length(Valid, Out).
 
 read_file(Path, Out):- open(Path, read, Fp), read_string(Fp, _, Out), close(Fp).
